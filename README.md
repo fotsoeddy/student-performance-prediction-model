@@ -1,12 +1,12 @@
 # 🧠 Student Success Prediction System
 
-A machine learning system that predicts the **probability that a student will pass Sequence 6 (final sequence)** using dual-model architecture combining academic performance and behavioral patterns.
+A machine learning system that predicts the **probability that a student will pass Sequence 6 (final sequence)** using a dual-model architecture combining academic performance and behavioral patterns.
 
 ## 🎯 Objective
 
-This system provides early prediction of student success by analyzing:
-- 📊 **Academic Performance** - Past results and academic trajectory
-- 📈 **Behavioral Data** - Daily habits, study patterns, and engagement
+Provide early prediction of student success by analyzing:
+- 📊 **Academic Performance** — Past results and academic trajectory
+- 📈 **Behavioral Data** — Study habits, engagement, and attendance
 
 ## 🏗️ System Architecture
 
@@ -22,16 +22,13 @@ Machine Learning Models
 
 ## 🧠 Core Concept
 
-The system uses **two complementary machine learning models**:
-
 | Model | Algorithm | Purpose | Weight |
 |-------|-----------|---------|--------|
-| Academic Model | Logistic Regression | Evaluates past academic performance | 60% |
-| Behavioral Model | XGBoost | Evaluates student habits and engagement | 40% |
+| Academic Model | Logistic Regression (calibrated) | Evaluates past academic performance | 70% |
+| Behavioral Model | XGBoost (calibrated) | Evaluates student habits and engagement | 30% |
 
-**Final Prediction Formula:**
 ```
-Final Probability = 0.6 × Academic Probability + 0.4 × Behavioral Probability
+Final Probability = 0.7 × Academic Probability + 0.3 × Behavioral Probability
 ```
 
 ## 📦 Project Structure
@@ -44,8 +41,9 @@ student-success-prediction/
 │   └── processed/                     # Aligned and cleaned data
 │
 ├── models/
-│   ├── academic_model.pkl             # Pre-trained academic model
-│   └── behavioral_model.pkl           # Pre-trained behavioral model
+│   ├── academic_model.pkl             # Trained academic model
+│   ├── behavioral_model.pkl           # Trained behavioral model
+│   └── engagement_scaler.pkl          # Scaler for engagement score
 │
 ├── src/
 │   └── models/
@@ -53,8 +51,9 @@ student-success-prediction/
 │       ├── train_behavioral_model.py  # Behavioral model training
 │       └── predict_system.py          # Core prediction logic
 │
-├── app.py                             # FastAPI application (API server)
+├── app.py                             # FastAPI application
 ├── test_api.py                        # API test suite
+├── train_models.py                    # Run full training pipeline
 ├── dataset_alignment.py               # UCI dataset preprocessing
 ├── kaggle_dataset_alignment.py        # Kaggle dataset preprocessing
 ├── requirements.txt                   # Python dependencies
@@ -67,15 +66,14 @@ student-success-prediction/
 
 ### Step 1: Clone Repository
 ```bash
-git clone <your-repo-url>
-cd student-success-prediction
+git clone https://github.com/fotsoeddy/student-performance-prediction-model.git
+cd student-performance-prediction-model
 ```
 
 ### Step 2: Create Virtual Environment (Recommended)
 ```bash
 python -m venv venv
 
-# Activate it
 # Windows:
 venv\Scripts\activate
 # Mac/Linux:
@@ -101,84 +99,96 @@ uvicorn app:app --reload
 
 ## 📡 API Usage
 
-### Make a Prediction
+### Endpoint
 
-**Endpoint:** `POST /predict`
+```
+POST /predict
+```
 
-#### cURL Example
+### Request Body
+
+```json
+{
+  "term1_avg": 10.0,
+  "term2_avg": 10.0,
+  "seq5_score": 10.0,
+  "attendance_percentage": 70.0,
+  "parental_support": 0,
+  "study_hours_per_day": 2.5,
+  "homework_completion": 65.0,
+  "class_participation": 2.5,
+  "extra_lessons": 0
+}
+```
+
+### Response
+
+```json
+{
+  "prediction": "Pass",
+  "probability": 0.612,
+  "academic_prob": 0.750,
+  "behavioral_prob": 0.320
+}
+```
+
+### cURL Example
 ```bash
 curl -X POST "http://127.0.0.1:8000/predict" \
   -H "Content-Type: application/json" \
   -d '{
-    "term1_avg": 12.0,
-    "term2_avg": 13.0,
-    "seq5_score": 14.0,
-    "attendance_percentage": 85.0,
-    "parental_support": 1,
-    "study_hours_per_day": 3.0,
-    "sleep_hours": 7.0,
-    "class_participation": 3,
-    "homework_completion": 80.0,
-    "extra_lessons": 1
+    "term1_avg": 10.0,
+    "term2_avg": 10.0,
+    "seq5_score": 10.0,
+    "attendance_percentage": 70.0,
+    "parental_support": 0,
+    "study_hours_per_day": 2.5,
+    "homework_completion": 65.0,
+    "class_participation": 2.5,
+    "extra_lessons": 0
   }'
 ```
 
-#### Python Example
+### Python Example
 ```python
 import requests
 
-url = "http://127.0.0.1:8000/predict"
-
-data = {
-    "term1_avg": 12.0,
-    "term2_avg": 13.0,
-    "seq5_score": 14.0,
-    "attendance_percentage": 85.0,
-    "parental_support": 1,
-    "study_hours_per_day": 3.0,
-    "sleep_hours": 7.0,
-    "class_participation": 3,
-    "homework_completion": 80.0,
-    "extra_lessons": 1
-}
-
-response = requests.post(url, json=data)
-result = response.json()
-
-print(f"Prediction: {result['prediction']}")
-print(f"Probability: {result['probability']:.1%}")
+response = requests.post(
+    "http://127.0.0.1:8000/predict",
+    json={
+        "term1_avg": 10.0,
+        "term2_avg": 10.0,
+        "seq5_score": 10.0,
+        "attendance_percentage": 70.0,
+        "parental_support": 0,
+        "study_hours_per_day": 2.5,
+        "homework_completion": 65.0,
+        "class_participation": 2.5,
+        "extra_lessons": 0
+    }
+)
+print(response.json())
 ```
 
-#### JavaScript/Fetch Example
+### JavaScript/Fetch Example
 ```javascript
 fetch("http://127.0.0.1:8000/predict", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    term1_avg: 12.0,
-    term2_avg: 13.0,
-    seq5_score: 14.0,
-    attendance_percentage: 85.0,
-    parental_support: 1,
-    study_hours_per_day: 3.0,
-    sleep_hours: 7.0,
-    class_participation: 3,
-    homework_completion: 80.0,
-    extra_lessons: 1
+    term1_avg: 10.0,
+    term2_avg: 10.0,
+    seq5_score: 10.0,
+    attendance_percentage: 70.0,
+    parental_support: 0,
+    study_hours_per_day: 2.5,
+    homework_completion: 65.0,
+    class_participation: 2.5,
+    extra_lessons: 0
   })
 })
 .then(res => res.json())
 .then(data => console.log(data));
-```
-
-#### Response
-```json
-{
-  "prediction": "Pass",
-  "probability": 0.867,
-  "academic_prob": 0.950,
-  "behavioral_prob": 0.742
-}
 ```
 
 ### Other Endpoints
@@ -188,53 +198,54 @@ fetch("http://127.0.0.1:8000/predict", {
 | GET | `/` | Root message |
 | GET | `/health` | Health check |
 | POST | `/predict` | Make prediction |
-| GET | `/info` | API information |
+| GET | `/info` | API and model information |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/redoc` | Alternative documentation |
 
 ---
 
-## 📊 Input Features Specification
+## 📊 Input Features
 
 ### 🎓 Academic Features
 
-| Feature | Description | Type | Range | Source |
-|---------|-------------|------|-------|--------|
-| `term1_avg` | Term 1 average score | float | 0-20 | School records |
-| `term2_avg` | Term 2 average score | float | 0-20 | School records |
-| `seq5_score` | Sequence 5 score | float | 0-20 | School records |
-| `attendance_percentage` | Attendance percentage | float | 0-100 | Aggregated from daily records |
-| `parental_support` | Parental support level | int | 0-1 | Student profile |
+| Field | Description | Type | Range | Source |
+|-------|-------------|------|-------|--------|
+| `term1_avg` | Term 1 average score | float | 0–20 | School records |
+| `term2_avg` | Term 2 average score | float | 0–20 | School records |
+| `seq5_score` | Sequence 5 score | float | 0–20 | School records |
+| `attendance_percentage` | Attendance percentage | float | 0–100 | Aggregated |
+| `parental_support` | Parental support | int | 0 or 1 | Student profile |
 
 ### 📈 Behavioral Features
 
-| Feature | Description | Type | Range | Source |
-|---------|-------------|------|-------|--------|
-| `study_hours_per_day` | Average daily study time | float | 0-24 | Aggregated from daily logs |
-| `sleep_hours` | Average sleep hours | float | 0-24 | Student self-report |
-| `class_participation` | Average participation level | int | 0-5 | Aggregated from daily records |
-| `homework_completion` | Average homework completion % | float | 0-100 | Aggregated from daily records |
-| `extra_lessons` | Number of tutoring sessions | int | ≥0 | School records |
+| Field | Description | Type | Range | Source |
+|-------|-------------|------|-------|--------|
+| `study_hours_per_day` | Avg daily study hours | float | 0–24 | Aggregated |
+| `homework_completion` | Homework completion % | float | 0–100 | Aggregated |
+| `class_participation` | Participation level | float | 0–5 | Aggregated |
+| `extra_lessons` | Number of extra lessons | int | ≥ 0 | School records |
+
+> `study_hours_per_day` and `homework_completion` are internally combined into an **Engagement Score** before being passed to the behavioral model. You still send them as raw values — the API handles the transformation.
 
 ---
 
-## ⚠️ CRITICAL: Data Requirements
+## ⚠️ Data Requirements
 
-### ✅ CORRECT - Send Aggregated Values
-```python
+### ✅ Send Aggregated Values
+```json
 {
-    "attendance_percentage": 85.0,      # Calculated: (days_present / total_days) * 100
-    "study_hours_per_day": 3.2,         # Calculated: average(daily_study_hours)
-    "homework_completion": 78.5,        # Calculated: average(homework_scores)
-    "class_participation": 3            # Calculated: average(participation_scores)
+  "attendance_percentage": 85.0,
+  "study_hours_per_day": 3.2,
+  "homework_completion": 78.5,
+  "class_participation": 3.0
 }
 ```
 
-### ❌ WRONG - Don't Send Raw Daily Data
-```python
+### ❌ Do Not Send Raw Daily Records
+```json
 {
-    "attendance": [1, 0, 1, 1, 1],      # ❌ Raw daily records
-    "study_hours": [2, 3, 4, 2, 3]      # ❌ Raw daily records
+  "attendance": [1, 0, 1, 1],
+  "study_hours": [2, 3, 4, 2]
 }
 ```
 
@@ -245,168 +256,107 @@ fetch("http://127.0.0.1:8000/predict", {
 ```
 1. Teacher inputs daily records
    ↓
-2. Backend aggregates data (attendance %, avg study hours, etc.)
+2. Backend aggregates (attendance %, avg study hours, etc.)
    ↓
 3. Backend combines with academic data (term scores)
    ↓
-4. Backend calls prediction API
+4. POST /predict with aggregated features
    ↓
-5. API returns prediction with probability
+5. API returns prediction + probabilities
 ```
 
 ---
 
 ## 🧪 Testing
 
-### Test the API
 ```bash
-# Make sure API is running first
+# Start API first
 uvicorn app:app --reload
 
-# In a new terminal, run tests
+# In a new terminal
 python test_api.py
 ```
 
-### Test Prediction Function Directly
-```bash
-python src/models/predict_system.py
-```
-
 ---
 
-## 🎯 Model Performance
+## 🎯 Model Details
 
 ### Academic Model
-- **Algorithm:** Logistic Regression
-- **AUC Score:** ~0.97
-- **Strength:** High accuracy on academic trajectory
-- **Features:** 5 academic indicators
+- Algorithm: Logistic Regression with Platt calibration
+- AUC: ~0.97
+- Features: 5 academic indicators
 
 ### Behavioral Model
-- **Algorithm:** XGBoost
-- **AUC Score:** ~0.85
-- **Strength:** Early risk detection from habits
-- **Features:** 6 behavioral indicators
+- Algorithm: XGBoost with Platt calibration
+- AUC: ~0.92
+- Features: 4 (engagement score + attendance + extra lessons + participation)
+- Engagement Score = normalized average of study hours and homework completion
 
 ---
 
-## 🔧 Advanced Usage
+## 🔧 Retrain Models (Optional)
 
-### Retrain Models (Optional)
-
-The repository includes pre-trained models. To retrain from scratch:
+Pre-trained models are included. To retrain from scratch:
 
 ```bash
-# Preprocess data
+# Preprocess raw data
 python dataset_alignment.py
 python kaggle_dataset_alignment.py
 
-# Train models
-python src/models/train_academic_model.py
-python src/models/train_behavioral_model.py
+# Train both models
+python train_models.py
 ```
 
-### Production Deployment
+---
+
+## 🚀 Production Deployment
 
 ```bash
-# Run with multiple workers
 uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-### Docker Deployment
-
+### Docker
 ```dockerfile
 FROM python:3.10-slim
-
 WORKDIR /app
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
-
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ---
 
-## 🔐 Security & Configuration
+## 🧠 Backend Integration Guide
 
-### CORS Settings
+Aggregate raw daily data before calling the API:
 
-By default, CORS is enabled for all origins. For production, modify `app.py`:
+```python
+attendance_percentage = (days_present / total_days) * 100
+study_hours_per_day   = sum(daily_study_hours) / num_days
+homework_completion   = sum(homework_scores) / num_assignments
+class_participation   = sum(participation_scores) / num_days
+```
+
+---
+
+## 🔐 CORS
+
+CORS is open by default. For production, restrict origins in `app.py`:
 
 ```python
 allow_origins=["https://your-frontend-domain.com"]
 ```
 
-### Environment Variables
-
-```bash
-export API_HOST=0.0.0.0
-export API_PORT=8000
-export LOG_LEVEL=info
-```
-
----
-
-## 📝 Logging
-
-All requests are automatically logged with:
-- Timestamp
-- Input data
-- Prediction results
-- Errors (if any)
-
-Check console output for logs.
-
----
-
-## 🧠 Backend Integration Guide
-
-### Your Responsibilities (Backend Developer)
-
-1. **Store raw daily data** from teacher inputs
-2. **Aggregate data** into model-ready features:
-   ```python
-   attendance_percentage = (days_present / total_days) * 100
-   study_hours_per_day = sum(daily_study_hours) / num_days
-   homework_completion = sum(homework_scores) / num_assignments
-   class_participation = sum(participation_scores) / num_days
-   ```
-3. **Call prediction API** with aggregated features
-4. **Display results** to teachers/administrators
-
 ---
 
 ## 📚 Data Sources
 
-- **UCI Student Performance Dataset** - Academic performance data
-- **Kaggle Student Performance Factors** - Behavioral and environmental factors
-
----
-
-## 🤝 Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+- UCI Student Performance Dataset
+- Kaggle Student Performance Factors Dataset
 
 ---
 
 ## 📄 License
 
 MIT License
-
----
-
-## 📞 Support
-
-For questions or issues:
-1. Check the interactive docs at `/docs`
-2. Review the examples above
-3. Open a GitHub issue
-
----
-
-## 🎉 You're Ready!
-
-The system is production-ready and can be integrated with any frontend or backend system. Start the API and visit http://127.0.0.1:8000/docs to explore!

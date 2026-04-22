@@ -45,16 +45,15 @@ def test_predict_success():
     print("="*60)
     
     data = {
-        "term1_avg": 12.0,
-        "term2_avg": 13.0,
-        "seq5_score": 14.0,
-        "attendance_percentage": 85.0,
-        "parental_support": 1,
-        "study_hours_per_day": 3.0,
-        "sleep_hours": 7.0,
-        "class_participation": 3,
-        "homework_completion": 80.0,
-        "extra_lessons": 1
+        "term1_avg": 10.0,
+        "term2_avg": 10.0,
+        "seq5_score": 10.0,
+        "attendance_percentage": 70.0,
+        "parental_support": 0,
+        "study_hours_per_day": 2.5,
+        "homework_completion": 65.0,
+        "class_participation": 2.5,
+        "extra_lessons": 0
     }
     
     print(f"Request Data: {json.dumps(data, indent=2)}")
@@ -80,15 +79,14 @@ def test_predict_invalid():
     # Invalid: term1_avg exceeds maximum
     data = {
         "term1_avg": 25.0,  # Invalid: max is 20
-        "term2_avg": 13.0,
-        "seq5_score": 14.0,
-        "attendance_percentage": 85.0,
-        "parental_support": 1,
-        "study_hours_per_day": 3.0,
-        "sleep_hours": 7.0,
-        "class_participation": 3,
-        "homework_completion": 80.0,
-        "extra_lessons": 1
+        "term2_avg": 10.0,
+        "seq5_score": 10.0,
+        "attendance_percentage": 70.0,
+        "parental_support": 0,
+        "study_hours_per_day": 2.5,
+        "homework_completion": 65.0,
+        "class_participation": 2.5,
+        "extra_lessons": 0
     }
     
     print(f"Request Data (Invalid): {json.dumps(data, indent=2)}")

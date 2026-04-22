@@ -53,78 +53,54 @@ class StudentInput(BaseModel):
     Input schema for student prediction with validation constraints.
     """
     term1_avg: float = Field(
-        ...,
-        ge=0,
-        le=20,
+        ..., ge=0, le=20,
         description="Term 1 average score (0-20)"
     )
     term2_avg: float = Field(
-        ...,
-        ge=0,
-        le=20,
+        ..., ge=0, le=20,
         description="Term 2 average score (0-20)"
     )
     seq5_score: float = Field(
-        ...,
-        ge=0,
-        le=20,
+        ..., ge=0, le=20,
         description="Sequence 5 score (0-20)"
     )
     attendance_percentage: float = Field(
-        ...,
-        ge=0,
-        le=100,
+        ..., ge=0, le=100,
         description="Attendance percentage (0-100)"
     )
     parental_support: int = Field(
-        ...,
-        ge=0,
-        le=1,
+        ..., ge=0, le=1,
         description="Parental support level (0 or 1)"
     )
     study_hours_per_day: float = Field(
-        ...,
-        ge=0,
-        le=24,
+        ..., ge=0, le=24,
         description="Average daily study hours (0-24)"
     )
-    sleep_hours: float = Field(
-        ...,
-        ge=0,
-        le=24,
-        description="Average sleep hours per day (0-24)"
-    )
-    class_participation: int = Field(
-        ...,
-        ge=0,
-        le=5,
-        description="Class participation level (0-5)"
-    )
     homework_completion: float = Field(
-        ...,
-        ge=0,
-        le=100,
+        ..., ge=0, le=100,
         description="Homework completion percentage (0-100)"
     )
+    class_participation: float = Field(
+        ..., ge=0, le=5,
+        description="Class participation level (0-5)"
+    )
     extra_lessons: int = Field(
-        ...,
-        ge=0,
+        ..., ge=0,
         description="Number of extra lessons/tutoring sessions (≥0)"
     )
-    
+
     class Config:
         schema_extra = {
             "example": {
-                "term1_avg": 12.0,
-                "term2_avg": 13.0,
-                "seq5_score": 14.0,
-                "attendance_percentage": 85.0,
-                "parental_support": 1,
-                "study_hours_per_day": 3.0,
-                "sleep_hours": 7.0,
-                "class_participation": 3,
-                "homework_completion": 80.0,
-                "extra_lessons": 1
+                "term1_avg": 10.0,
+                "term2_avg": 10.0,
+                "seq5_score": 10.0,
+                "attendance_percentage": 70.0,
+                "parental_support": 0,
+                "study_hours_per_day": 2.5,
+                "homework_completion": 65.0,
+                "class_participation": 2.5,
+                "extra_lessons": 0
             }
         }
 
@@ -259,9 +235,6 @@ async def predict(student: StudentInput) -> Dict[str, Union[str, float]]:
 async def api_info() -> Dict[str, Union[str, Dict]]:
     """
     Get API information and feature requirements.
-    
-    Returns:
-        API information including required features
     """
     return {
         "api_name": "Student Success Prediction API",
@@ -269,8 +242,8 @@ async def api_info() -> Dict[str, Union[str, Dict]]:
         "description": "Predicts student pass/fail probability using dual-model approach",
         "models": {
             "academic": {
-                "algorithm": "Logistic Regression",
-                "weight": 0.6,
+                "algorithm": "Logistic Regression (calibrated)",
+                "weight": 0.7,
                 "features": [
                     "term1_avg",
                     "term2_avg",
@@ -280,15 +253,13 @@ async def api_info() -> Dict[str, Union[str, Dict]]:
                 ]
             },
             "behavioral": {
-                "algorithm": "XGBoost",
-                "weight": 0.4,
+                "algorithm": "XGBoost (calibrated)",
+                "weight": 0.3,
                 "features": [
-                    "study_hours_per_day",
-                    "sleep_hours",
-                    "class_participation",
-                    "homework_completion",
+                    "engagement_score (derived from study_hours_per_day + homework_completion)",
+                    "attendance_percentage",
                     "extra_lessons",
-                    "attendance_percentage"
+                    "class_participation"
                 ]
             }
         },
