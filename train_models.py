@@ -41,7 +41,11 @@ def main():
     print("\nEstimated time: 2-3 minutes")
     print("=" * 70)
     
-    input("\nPress Enter to start training...")
+    interactive = "--non-interactive" not in sys.argv
+    if interactive:
+        input("\nPress Enter to start training...")
+    else:
+        print("\nStarting training in non-interactive mode...")
     
     # Training scripts in order
     scripts = [

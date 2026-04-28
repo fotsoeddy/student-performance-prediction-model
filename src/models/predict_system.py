@@ -1,23 +1,34 @@
 """
 Student Success Prediction System
+==================================
 Combines calibrated academic and behavioral models using weighted ensemble.
-Uses engagement score to reduce feature redundancy.
+Includes risk level classification, rule-based explanations, and batch support.
 """
 
 import joblib
 import os
 import numpy as np
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 
 # =========================================
-# CONSTANTS
+# CONSTANTS & CONFIGURATION
 # =========================================
 
 ACADEMIC_WEIGHT = 0.7
 BEHAVIORAL_WEIGHT = 0.3
 PASS_THRESHOLD = 0.5
 
-# Academic feature order (must match training order)
+# Risk Level Thresholds (based on pass probability)
+# low_risk: >= 0.70
+# medium_risk: 0.45 - 0.69
+# high_risk: < 0.45
+RISK_LEVELS = {
+    "LOW": {"threshold": 0.70, "label": "Low Risk"},
+    "MEDIUM": {"threshold": 0.45, "label": "Medium Risk"},
+    "HIGH": {"threshold": 0.00, "label": "High Risk"}
+}
+
+# Academic feature order
 ACADEMIC_FEATURE_ORDER = [
     "term1_avg",
     "term2_avg",
@@ -26,13 +37,13 @@ ACADEMIC_FEATURE_ORDER = [
     "parental_support"
 ]
 
-# Raw behavioral inputs (used to compute engagement_score)
+# Raw behavioral inputs
 BEHAVIORAL_RAW_FEATURES = [
     "study_hours_per_day",
     "homework_completion"
 ]
 
-# Validation constraints for all input fields
+# Validation constraints
 VALIDATION_RULES = {
     "term1_avg":             {"min": 0,   "max": 20,  "type": (int, float)},
     "term2_avg":             {"min": 0,   "max": 20,  "type": (int, float)},
@@ -51,9 +62,15 @@ VALIDATION_RULES = {
 
 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-academic_model    = joblib.load(os.path.join(base_dir, "models", "academic_model.pkl"))
-behavioral_model  = joblib.load(os.path.join(base_dir, "models", "behavioral_model.pkl"))
-engagement_scaler = joblib.load(os.path.join(base_dir, "models", "engagement_scaler.pkl"))
+try:
+    academic_model    = joblib.load(os.path.join(base_dir, "models", "academic_model.pkl"))
+    behavioral_model  = joblib.load(os.path.join(base_dir, "models", "behavioral_model.pkl"))
+    engagement_scaler = joblib.load(os.path.join(base_dir, "models", "engagement_scaler.pkl"))
+except Exception as e:
+    print(f"⚠️ Warning: Some models could not be loaded. Ensure training is complete. Error: {e}")
+    academic_model = None
+    behavioral_model = None
+    engagement_scaler = None
 
 
 # =========================================
@@ -75,24 +92,66 @@ def validate_input(data: Dict[str, Union[int, float]]) -> None:
         rules = VALIDATION_RULES[field]
 
         if not isinstance(value, rules["type"]):
-            raise ValueError(f"'{field}' must be {rules['type']}, got {type(value)}")
+            # Allow int to be treated as float for scores
+            if isinstance(value, int) and float in rules["type"]:
+                pass
+            else:
+                raise ValueError(f"'{field}' must be {rules['type']}, got {type(value)}")
+        
         if value < rules["min"]:
             raise ValueError(f"'{field}' must be >= {rules['min']}, got {value}")
         if rules["max"] is not None and value > rules["max"]:
             raise ValueError(f"'{field}' must be <= {rules['max']}, got {value}")
 
 
-def extract_features(data: Dict[str, Union[int, float]],
-                     feature_order: List[str]) -> List[Union[int, float]]:
-    """Return feature values in the exact order the model expects."""
-    return [data[f] for f in feature_order]
+def classify_risk_level(prob: float) -> str:
+    """Classify risk level based on pass probability."""
+    if prob >= RISK_LEVELS["LOW"]["threshold"]:
+        return RISK_LEVELS["LOW"]["label"]
+    elif prob >= RISK_LEVELS["MEDIUM"]["threshold"]:
+        return RISK_LEVELS["MEDIUM"]["label"]
+    else:
+        return RISK_LEVELS["HIGH"]["label"]
+
+
+def generate_explanations(data: Dict[str, Any], prob: float) -> List[str]:
+    """Rule-based explanations for the prediction."""
+    reasons = []
+    
+    # 1. Attendance checks
+    if data["attendance_percentage"] < 60:
+        reasons.append("Critical: Very low attendance (below 60%)")
+    elif data["attendance_percentage"] < 80:
+        reasons.append("Low attendance (below 80%)")
+    
+    # 2. Academic performance
+    avg_score = (data["term1_avg"] + data["term2_avg"]) / 2
+    if avg_score < 10:
+        reasons.append("Weak academic foundation: Average scores below 10/20")
+    if data["seq5_score"] < 10:
+        reasons.append("Downward trend: Sequence 5 score is failing")
+
+    # 3. Effort/Support
+    if data["study_hours_per_day"] < 1.5:
+        reasons.append("Insufficient study time (below 1.5h/day)")
+    if data["homework_completion"] < 50:
+        reasons.append("Poor homework completion (below 50%)")
+    if data["parental_support"] == 0:
+        reasons.append("Lack of parental support at home")
+
+    # If probability is high but some flags exist
+    if prob >= 0.7 and not reasons:
+        reasons.append("Consistent performance across all metrics")
+    elif not reasons:
+        reasons.append("Performances are borderline across multiple factors")
+        
+    return reasons
 
 
 def compute_engagement_score(data: Dict[str, Union[int, float]]) -> float:
-    """
-    Combine study_hours_per_day and homework_completion into a single
-    normalized engagement score (0–1) using the fitted MinMaxScaler.
-    """
+    """Normalize study hours and homework completion into one score."""
+    if engagement_scaler is None:
+        return 0.5 # Default middle ground if model not loaded
     scaled = engagement_scaler.transform(
         [[data["study_hours_per_day"], data["homework_completion"]]]
     )
@@ -100,39 +159,23 @@ def compute_engagement_score(data: Dict[str, Union[int, float]]) -> float:
 
 
 # =========================================
-# PREDICTION FUNCTION
+# CORE PREDICTION FUNCTIONS
 # =========================================
 
-def predict_student(data: Dict[str, Union[int, float]]) -> Dict[str, Union[str, float]]:
+def predict_student(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Predict student pass/fail probability.
-
-    Required input fields:
-        term1_avg             – Term 1 average score       (0–20)
-        term2_avg             – Term 2 average score       (0–20)
-        seq5_score            – Sequence 5 score           (0–20)
-        attendance_percentage – Attendance percentage      (0–100)
-        parental_support      – Parental support           (0 or 1)
-        study_hours_per_day   – Avg daily study hours      (0–24)
-        homework_completion   – Homework completion %      (0–100)
-        class_participation   – Participation level        (0–5)
-        extra_lessons         – Number of extra lessons    (≥ 0)
-
-    Returns:
-        {
-            "prediction":     "Pass" | "Fail",
-            "probability":    float,
-            "academic_prob":  float,
-            "behavioral_prob": float
-        }
+    Predict success for a single student.
     """
+    if academic_model is None or behavioral_model is None:
+        raise RuntimeError("Models not loaded. Please run training pipeline first.")
+
     # 1. Validate
     validate_input(data)
 
     # 2. Academic features
-    academic_features = extract_features(data, ACADEMIC_FEATURE_ORDER)
+    academic_features = [data[f] for f in ACADEMIC_FEATURE_ORDER]
 
-    # 3. Behavioral features (engagement score replaces study + homework)
+    # 3. Behavioral features
     engagement_score = compute_engagement_score(data)
     behavioral_features = [
         engagement_score,
@@ -141,43 +184,78 @@ def predict_student(data: Dict[str, Union[int, float]]) -> Dict[str, Union[str, 
         data["class_participation"]
     ]
 
-    # 4. Get calibrated probabilities
+    # 4. Probabilities
     prob_academic   = academic_model.predict_proba([academic_features])[0][1]
     prob_behavioral = behavioral_model.predict_proba([behavioral_features])[0][1]
 
-    # 5. Weighted ensemble
+    # 5. Ensemble
     final_prob = (ACADEMIC_WEIGHT * prob_academic) + (BEHAVIORAL_WEIGHT * prob_behavioral)
 
-    # 6. Decision
+    # 6. Results
+    risk_level = classify_risk_level(final_prob)
     prediction = "Pass" if final_prob >= PASS_THRESHOLD else "Fail"
+    explanations = generate_explanations(data, final_prob)
+    
+    # Confidence message
+    if final_prob > 0.85 or final_prob < 0.15:
+        message = "High confidence prediction"
+    elif final_prob > 0.65 or final_prob < 0.35:
+        message = "Moderate confidence prediction"
+    else:
+        message = "Low confidence (borderline case)"
 
     return {
         "prediction":      prediction,
         "probability":     round(float(final_prob), 3),
+        "risk_level":      risk_level,
         "academic_prob":   round(float(prob_academic), 3),
-        "behavioral_prob": round(float(prob_behavioral), 3)
+        "behavioral_prob": round(float(prob_behavioral), 3),
+        "confidence":      message,
+        "explanations":    explanations
     }
 
 
+def predict_batch(students: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Predict success for a list of students.
+    """
+    results = []
+    for i, student in enumerate(students):
+        try:
+            results.append({
+                "index": i,
+                "status": "success",
+                "result": predict_student(student)
+            })
+        except Exception as e:
+            results.append({
+                "index": i,
+                "status": "error",
+                "message": str(e)
+            })
+    return results
+
+
 # =========================================
-# QUICK TEST
+# CLI TEST HOOK
 # =========================================
 
 if __name__ == "__main__":
     sample = {
-        "term1_avg": 10,
-        "term2_avg": 10,
-        "seq5_score": 10,
-        "attendance_percentage": 70,
+        "term1_avg": 8.5,
+        "term2_avg": 9.0,
+        "seq5_score": 7.5,
+        "attendance_percentage": 55,
         "parental_support": 0,
-        "study_hours_per_day": 2.5,
-        "homework_completion": 65,
-        "class_participation": 2,
+        "study_hours_per_day": 1.0,
+        "homework_completion": 40,
+        "class_participation": 1,
         "extra_lessons": 0
     }
 
-    result = predict_student(sample)
-    print(f"Prediction:          {result['prediction']}")
-    print(f"Overall Probability: {result['probability']:.1%}")
-    print(f"Academic Prob:       {result['academic_prob']:.1%}")
-    print(f"Behavioral Prob:     {result['behavioral_prob']:.1%}")
+    try:
+        res = predict_student(sample)
+        import json
+        print(json.dumps(res, indent=2))
+    except Exception as e:
+        print(f"Prediction failed: {e}")

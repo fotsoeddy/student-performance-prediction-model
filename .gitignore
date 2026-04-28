@@ -26,7 +26,8 @@ wheels/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Models (optional - uncomment if models are too large)
+# Models
+# We keep these in the repo for the API unless they are huge
 # models/*.pkl
 
 # IDE
@@ -39,10 +40,20 @@ wheels/
 .DS_Store
 Thumbs.db
 
-# Data (keep structure, ignore large files if needed)
+# Data
 # data/raw/*.csv
 # data/processed/*.csv
 
-# Development/preprocessing scripts (optional - uncomment to exclude from repo)
-# dataset_alignment.py
-# kaggle_dataset_alignment.py
+# Development/preprocessing scripts
+dataset_alignment.py
+kaggle_dataset_alignment.py
+
+# Env
+.env
+.env.example
+
+# Logs
+*.log
+
+# Gemini related
+.gemini/
