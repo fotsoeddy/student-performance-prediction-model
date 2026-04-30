@@ -1,0 +1,27 @@
+# Virtual environments
+venv/
+env/
+.env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Data and Models
+data/
+models/
+
+# Development and Git
+.git/
+.gitignore
+.pytest_cache/
+tests/
+
+# Documentation and Reports
+reports/
+*.md
+
+# Compose
+docker-compose.yml

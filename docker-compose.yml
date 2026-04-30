@@ -17,4 +17,4 @@ services:
     entrypoint: ["/bin/bash", "/app/scripts/entrypoint.sh"]
     # Overrides Dockerfile CMD to include --reload for development
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    restart: unless-stopped
+    restart: always
