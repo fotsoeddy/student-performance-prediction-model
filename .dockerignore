@@ -1,27 +1,33 @@
-# Virtual environments
+.git
+.gitignore
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
 venv/
 env/
-.env/
+.venv/
 
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
+.env
+.env.*
 
-# Data and Models
-data/
-models/
-
-# Development and Git
-.git/
-.gitignore
 .pytest_cache/
-tests/
+.mypy_cache/
+.ruff_cache/
 
-# Documentation and Reports
+.ipynb_checkpoints/
+
+*.log
+logs/
+
+.DS_Store
+Thumbs.db
+
 reports/
-*.md
+data/raw/
+data/processed/
 
-# Compose
-docker-compose.yml
+docker-compose.override.yml
