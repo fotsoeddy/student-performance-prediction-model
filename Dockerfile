@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8005
+ENV PORT=8006
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -20,8 +20,8 @@ COPY . .
 RUN mkdir -p models reports data/processed scripts \
     && chmod +x /app/scripts/entrypoint.sh
 
-EXPOSE 8005
+EXPOSE 8006
 
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8005"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8006"]
