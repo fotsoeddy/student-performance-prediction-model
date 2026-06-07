@@ -54,7 +54,7 @@ class StudentInput(BaseModel):
     term2_avg: float = Field(..., ge=0, le=20, description="Term 2 average (0-20)")
     seq5_score: float = Field(..., ge=0, le=20, description="Sequence 5 score (0-20)")
     attendance_percentage: float = Field(..., ge=0, le=100, description="Attendance % (0-100)")
-    parental_support: int = Field(..., ge=0, le=1, description="Parental support (0 or 1)")
+    parental_support: int = Field(..., ge=0, le=2, description="Parental support (0, 1, or 2)")
     study_hours_per_day: float = Field(..., ge=0, le=24, description="Daily study hours (0-24)")
     homework_completion: float = Field(..., ge=0, le=100, description="Homework completion % (0-100)")
     class_participation: float = Field(..., ge=0, le=5, description="Participation level (0-5)")

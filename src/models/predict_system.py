@@ -49,7 +49,7 @@ VALIDATION_RULES = {
     "term2_avg":             {"min": 0,   "max": 20,  "type": (int, float)},
     "seq5_score":            {"min": 0,   "max": 20,  "type": (int, float)},
     "attendance_percentage": {"min": 0,   "max": 100, "type": (int, float)},
-    "parental_support":      {"min": 0,   "max": 1,   "type": int},
+    "parental_support":      {"min": 0,   "max": 2,   "type": int},
     "study_hours_per_day":   {"min": 0,   "max": 24,  "type": (int, float)},
     "homework_completion":   {"min": 0,   "max": 100, "type": (int, float)},
     "class_participation":   {"min": 0,   "max": 5,   "type": (int, float)},
